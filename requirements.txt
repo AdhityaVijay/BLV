@@ -1,0 +1,26 @@
+# Core CV / camera
+opencv-python==4.10.0.84
+numpy==1.26.4
+pillow==10.4.0
+
+# Object detection (obstacle alerts)
+ultralytics==8.3.28      # YOLOv8, pulls in torch/torchvision as deps
+
+# Scene description (VQA / captioning)
+transformers==4.46.3
+sentencepiece==0.2.0     # tokenizer backend some HF models need
+accelerate==1.1.1        # faster HF model loading/inference
+
+# Torch (CPU build by default; see README for CUDA instructions)
+torch==2.5.1
+torchvision==0.20.1
+
+# Audio
+pyttsx3==2.98            # offline text-to-speech
+
+# Config / utils
+pyyaml==6.0.2
+python-dotenv==1.0.1
+
+# Testing
+pytest==8.3.3
