@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+models/*.pt
+models/*.onnx
+data/samples/*
+!data/samples/.gitkeep
+logs/
+.pytest_cache/
+*.egg-info/
+.DS_Store
