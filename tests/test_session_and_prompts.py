@@ -74,11 +74,16 @@ def test_every_category_enforces_left_right_not_clock_face(lib):
 
 def test_reactive_categories_carry_the_grounding_contract(lib):
     """The anti-sycophancy clause must be present in the categories that talk
-    to the user, or the grounded condition in day 6 is a no-op."""
+    to the user, or the grounded condition in day 6 is a no-op.
+
+    v1.2.0 tightened the clause's wording from "correct them" to an explicit
+    instruction to state the contradiction plainly and not soften it on a
+    repeat -- this test was updated alongside that prompt change."""
     for category in ("scene_description", "object_localization"):
         p = lib.by_category(category).system_prompt.lower()
         assert "detector facts" in p
-        assert "correct them" in p
+        assert "state the contradiction plainly" in p
+        assert "do not soften" in p
 
 
 def test_every_category_has_few_shot_examples(lib):
