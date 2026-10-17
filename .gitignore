@@ -1,12 +1,28 @@
 venv/
 __pycache__/
 *.pyc
-.env
-models/*.pt
-models/*.onnx
-data/samples/*
-!data/samples/.gitkeep
-logs/
 .pytest_cache/
 *.egg-info/
+
+# Model weights — pulled by ultralytics/ollama, never committed
+*.pt
+*.onnx
+*.engine
+
+# Session logs contain raw camera-derived descriptions; keep them local.
+# Commit curated excerpts instead (see README).
+logs/*.jsonl
+!logs/.gitkeep
+
+# Personal test media
+test_data/images/*
+test_data/clips/*
+!test_data/images/.gitkeep
+!test_data/clips/.gitkeep
+
+.env
 .DS_Store
+
+# Superseded early prototype (BLIP-based scaffold) — kept locally for reference,
+# not part of the current submission. See git history for its own commits.
+_archive_blip_prototype/
