@@ -1,0 +1,19 @@
+23:29:44 | INFO    | __main__ | Loading object detector...
+23:29:47 | INFO    | __main__ | Loading scene describer (this can take a while on first run)...
+23:35:01 | INFO    | __main__ | Starting camera. Press 'q' to quit, 'd' to describe the scene.
+23:35:10 | INFO    | __main__ | ALERT: person very close ahead
+23:35:17 | INFO    | __main__ | ALERT: person very close ahead
+23:35:23 | INFO    | __main__ | ALERT: person very close ahead
+23:35:29 | INFO    | __main__ | ALERT: person very close ahead
+01:16:20 | INFO    | __main__ | Loading object detector...
+01:16:20 | INFO    | __main__ | Loading scene describer (this can take a while on first run)...
+01:16:23 | INFO    | __main__ | Starting camera. Press 'q' to quit, 'd' to describe the scene.
+01:16:24 | INFO    | __main__ | ALERT: person very close on your right
+01:16:28 | INFO    | __main__ | ALERT: person very close ahead
+01:16:32 | INFO    | __main__ | ALERT: person very close on your right
+01:16:36 | INFO    | __main__ | ALERT: person very close ahead
+01:16:39 | INFO    | __main__ | ALERT: person close on your left
+01:16:43 | INFO    | __main__ | ALERT: person close ahead
+01:16:46 | INFO    | __main__ | ALERT: person very close ahead
+01:16:53 | INFO    | __main__ | ALERT: person very close ahead
+01:16:59 | INFO    | __main__ | ALERT: person very close ahead
