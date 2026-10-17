@@ -1,0 +1,109 @@
+# Single source of truth for every tunable in the system.
+# Spatial convention for this build: LEFT/RIGHT + DISTANCE (not clock-face).
+# Chosen because a standard webcam's ~60-70 deg horizontal FOV would squash
+# every object into the 11-1 o'clock range, making clock-face uninformative.
+
+camera:
+  device_index: 0
+  frame_width: 640
+  frame_height: 480
+  fps: 30
+  # Horizontal field of view in degrees. Used to derive focal length for the
+  # metric distance estimate. Measure yours if you want better accuracy:
+  # place an object of known width at a known distance and solve for FOV.
+  horizontal_fov_deg: 60.0
+  throttle_every_n_frames: 3   # detector runs on every Nth frame
+
+detector:
+  model_path: "yolov8n.pt"     # ultralytics auto-downloads on first run
+  device: "auto"               # "auto" | "cuda" | "cpu"  (auto -> cuda if available)
+  confidence_threshold: 0.45
+
+  # Restrict announcements to classes that plausibly matter when walking.
+  # Empty list = all 80 COCO classes. NOTE: COCO has no stairs/curb/pothole
+  # class - see README "Known limitations".
+  relevant_classes:
+    - person
+    - bicycle
+    - car
+    - motorcycle
+    - bus
+    - truck
+    - dog
+    - cat
+    - chair
+    - couch
+    - bench
+    - potted plant
+    - dining table
+    - refrigerator
+    - tv
+    - backpack
+    - suitcase
+    - bottle
+    - cup
+    - laptop
+
+  # "How close is close" - deliberately simple and tunable (Day 1 constraint).
+  # Two independent triggers: metric distance, and raw frame-area fraction as
+  # a fallback for objects with no known real-world height.
+  area_fraction_alert: 0.18     # bbox covering >18% of frame = close
+  distance_bands_m:
+    imminent: 1.0               # < 1.0 m
+    near: 2.0                   # 1.0 - 2.0 m
+    mid: 4.0                    # 2.0 - 4.0 m
+                                # > 4.0 m = far
+
+  # Danger zone = the walking corridor: central horizontal band, lower part
+  # of the frame (where the floor/path is). Fractions of frame w/h.
+  danger_zone:
+    x_min: 0.30
+    x_max: 0.70
+    y_min: 0.40                 # object's BOTTOM edge must be below this
+
+  # Classes that escalate one severity level when in the danger zone,
+  # because a collision with them is worse or they move toward you.
+  high_risk_classes: [person, bicycle, car, motorcycle, bus, truck, dog]
+
+arbitration:
+  # Severity ordinals: low=0, medium=1, high=2, critical=3
+  interrupt_threshold: "critical"   # >= this interrupts an in-flight reactive turn
+  queue_threshold: "high"           # >= this is queued for after; below = suppressed
+  alert_cooldown_s: 6.0             # same object+position phrase won't repeat within this
+  min_gap_between_alerts_s: 1.5     # floor on spacing between any two spoken alerts
+  # Critical hazards skip the global spacing rule but keep their own, shorter
+  # per-key cooldown. Without this a persistent hazard re-fires at the
+  # detector's frame rate and every repeat cuts off the previous utterance,
+  # leaving the system silent exactly when it matters most.
+  critical_cooldown_s: 2.5
+  queue_max_age_s: 8.0              # a queued alert older than this is dropped as stale
+
+tts:
+  rate: 185
+  volume: 1.0
+
+vlm:
+  model: "minicpm-v"
+  fallback_model: "llama3.2-vision"
+  host: "http://localhost:11434"
+  request_timeout_s: 120
+  max_history_turns: 6          # cap: last 6 turns kept, older dropped (latency control)
+  session_idle_timeout_s: 45.0  # no query for this long = conversation session ends
+  jpeg_quality: 85              # frames are JPEG-encoded before being sent to Ollama
+
+grounding:
+  # THE NOVEL COMPONENT. When enabled, detector geometry is injected into every
+  # VLM prompt as hard facts, and parsed user intent flows back to re-weight
+  # hazard salience. Set false for the Day 6 ablation (grounded vs ungrounded).
+  enabled: true
+  max_objects_in_prompt: 8
+  # Detector facts older than this are not sent to the VLM (stale scene).
+  max_fact_age_s: 2.0
+  # Intent-driven salience adjustments (the detector<-VLM backward path).
+  intent_navigating_boost: 1    # +1 severity level for danger-zone objects
+  intent_inspecting_damp: 1     # -1 severity level for non-critical alerts
+  search_announce_cooldown_s: 10.0
+
+logging:
+  session_log: "logs/session_log.jsonl"
+  console_level: "INFO"
