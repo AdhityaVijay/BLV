@@ -315,13 +315,22 @@ class VLM:
                     error = f"{error} | fallback failed: {type(e2).__name__}: {e2}"
         latency_ms = (time.perf_counter() - t0) * 1000.0
 
-        override_applied = False
-        if text and not error and did_ground:
-            text, override_applied = self._consistency_floor(text)
-
+        # Conversation history gets the model's OWN words, never the floor
+        # sentence: day-6 dry-run testing found that once "Detector confirms:"
+        # appeared in an earlier assistant turn, minicpm-v started imitating
+        # that exact phrase to dress up its own, contradicting claims with the
+        # same false authority ("Detector confirms: it's safe to walk forward
+        # ... according to the detector" -- fabricated, not from the
+        # detector). The floor is a presentation-layer guarantee for the
+        # person listening on this turn, not a fact the model should ever see
+        # itself having said, so it is applied AFTER history is written.
         if text and not error:
             session.add_user(user_content)
             session.add_assistant(text)
+
+        override_applied = False
+        if text and not error and did_ground:
+            text, override_applied = self._consistency_floor(text)
 
         result = VLMResponse(
             text=text,
