@@ -26,3 +26,4 @@ test_data/clips/*
 # Superseded early prototype (BLIP-based scaffold) — kept locally for reference,
 # not part of the current submission. See git history for its own commits.
 _archive_blip_prototype/
+*.log
