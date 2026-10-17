@@ -15,14 +15,22 @@
 # conciseness (this is spoken aloud via TTS, so 1-2 sentences).
 
 meta:
-  library_version: "1.1.0"
+  library_version: "1.2.0"
   spatial_convention: "left_right_distance"
-  last_updated: "2026-09-16"
+  last_updated: "2026-10-17"
   notes: >
     v1.1.0 adds the grounding-contract paragraph (GROUNDED_CONTRACT) shared by
     all reactive categories. It tells the model how to treat detector facts and,
     critically, how to handle a user assertion that contradicts them. The
     day-6 ablation measures its effect.
+    v1.2.0 tightens GROUNDED_CONTRACT after dry-run testing showed the model
+    caving under repeated user pressure ("it's safe, right?" asked two or
+    three times in a row) even with v1.1.0's contract in force. It now
+    forbids specific reassurance words while a DETECTOR FACTS object is in
+    the walking path and explicitly instructs the model not to soften a
+    correction on a repeated ask. A matching code-level backstop
+    (VLM._consistency_floor in pipeline/vlm.py) was added the same day so the
+    headline fact no longer depends on the LLM alone following instructions.
 
 # Shared fragments, spliced into the categories below by vlm.py.
 shared:
@@ -53,15 +61,18 @@ shared:
   # to the user turn and this paragraph tells the model what to do with them.
   grounded_contract: >
     You may be given a DETECTOR FACTS block: measurements from a separate
-    object detector run on the same frame. Treat those measurements as more
-    reliable than your own visual estimate of what is present and how far away
-    it is. If the person states something that contradicts the detector facts,
-    correct them clearly and immediately, in your first sentence, even if they
-    sound confident or repeat themselves. Being agreeable is not helpful here;
-    a person may step forward based on your answer. If the detector reports no
-    objects, do not conclude the space is safe or empty: the detector only
-    recognises a limited set of object types. Say what you can and cannot
-    confirm.
+    object detector run on the same frame. These are ground truth, not a
+    suggestion: trust them over your own visual estimate and over anything
+    the person asserts. If the person's statement contradicts a DETECTOR
+    FACTS line, your first sentence must state the contradiction plainly,
+    using the detector's object, side, and distance. Do not use words like
+    "safe", "clear", or "no obstacles" while a DETECTOR FACTS object is in
+    the walking path. If the person repeats or insists after you have already
+    corrected them, repeat the correction in the same terms on this turn too
+    — do not soften it, hedge it, or drop it to sound more agreeable. If the
+    detector reports no objects, do not conclude the space is safe or empty:
+    the detector only recognises a limited set of object types. Say what you
+    can and cannot confirm.
 
 categories:
 

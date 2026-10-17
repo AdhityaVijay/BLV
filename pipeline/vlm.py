@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from pipeline.prompt_library import PromptLibrary
-from pipeline.scene_state import SceneState
+from pipeline.scene_state import Severity, SceneState
 
 # cv2/numpy are imported lazily: ConversationSession is pure logic and must be
 # unit testable without an OpenCV install.
@@ -53,6 +53,7 @@ class VLMResponse:
     turn_index: int
     grounded: bool
     prompt_id: str
+    override_applied: bool = False
     error: str | None = None
 
 
@@ -198,6 +199,42 @@ class VLM:
             return question, False
         return f"{question}\n\n{block}", True
 
+    def _consistency_floor(self, text: str) -> tuple[str, bool]:
+        """Deterministic floor under a grounded reactive answer.
+
+        The proactive layer never trusts free text for hazard phrasing (see
+        prompts/system_prompts.yaml, hazard_alert_v2) -- it speaks from fixed
+        templates so a model can't hallucinate or soften a safety-critical
+        alert. Day-6 dry-run testing showed the reactive layer needs the same
+        floor: under repeated user pressure ("it's safe, right?" asked two or
+        three times), minicpm-v sometimes caved even with the v1.1.0 grounding
+        contract in its system prompt, agreeing the path was clear while a
+        person sat in it.
+
+        This does not replace the prompt-side contract (grounded_contract);
+        it is a hard backstop under it, and it is deliberately unconditional:
+        if a fresh, in-path or high-severity object is on the blackboard, the
+        spoken answer always opens with the deterministic alert phrase,
+        regardless of what the LLM generated. The model's own sentence still
+        follows, so detail and nuance aren't lost -- only the headline fact is
+        no longer negotiable. Logged as `override_applied` so the eval data
+        shows how often the LLM alone would have failed without this floor.
+        """
+        if self.scene_state is None:
+            return text, False
+        objects, age = self.scene_state.snapshot()
+        if age > self.scene_state.max_fact_age_s:
+            return text, False
+        hazards = [o for o in objects if o.in_danger_zone or o.severity >= Severity.HIGH]
+        if not hazards:
+            return text, False
+        worst = max(
+            hazards,
+            key=lambda o: (int(o.severity), -(o.distance_m if o.distance_m is not None else 1e6)),
+        )
+        floor_sentence = f"Detector confirms: {worst.alert_phrase()}, in your walking path."
+        return f"{floor_sentence} {text}", True
+
     def ask(
         self,
         frame: np.ndarray | None,
@@ -278,6 +315,10 @@ class VLM:
                     error = f"{error} | fallback failed: {type(e2).__name__}: {e2}"
         latency_ms = (time.perf_counter() - t0) * 1000.0
 
+        override_applied = False
+        if text and not error and did_ground:
+            text, override_applied = self._consistency_floor(text)
+
         if text and not error:
             session.add_user(user_content)
             session.add_assistant(text)
@@ -290,6 +331,7 @@ class VLM:
             turn_index=session.turn_count,
             grounded=did_ground,
             prompt_id=entry.id,
+            override_applied=override_applied,
             error=error,
         )
 
@@ -304,6 +346,7 @@ class VLM:
                 response=text,
                 model=model_used,
                 latency_ms=round(latency_ms, 1),
+                override_applied=override_applied,
                 error=error,
             )
         return result
